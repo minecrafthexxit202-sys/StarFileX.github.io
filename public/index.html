@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta name="description" content="Star File X - Nền tảng chia sẻ tệp ẩn danh, bảo mật tuyệt đối, không lưu dấu vết và hỗ trợ hoàn hảo trên tab ẩn danh.">
+  <title>Star File X - Chia Sẻ Tệp Ẩn Danh & Tuyệt Mật</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>★</text></svg>">
+</head>
+<body>
+  <!-- Canvas nền sao chuyển động -->
+  <canvas id="starCanvas"></canvas>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <h1 class="brand-title">
+        <span class="star-icon">★</span> STAR FILE X
+      </h1>
+      <div class="brand-subtitle">
+        <span>Ẩn Danh Tuyệt Đối</span> • 
+        <span>Không Dấu Vết</span> • 
+        <span class="badge-incognito">Tab Ẩn Danh OK</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tab-nav">
+      <button class="tab-btn active" id="tabBtnSend" onclick="switchTab('send')">
+        <span>📤</span> Gửi Tệp (Sender)
+      </button>
+      <button class="tab-btn" id="tabBtnReceive" onclick="switchTab('receive')">
+        <span>📥</span> Nhận Tệp (Receiver)
+      </button>
+    </nav>
+
+    <!-- ======================================================= -->
+    <!-- TAB 1: BÊN GỬI TỆP (SENDER) -->
+    <!-- ======================================================= -->
+    <main class="main-card" id="senderSection">
+      <!-- Bước 1: Chọn File & Cấu hình -->
+      <div id="senderStepSelect">
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div class="drop-icon">📁</div>
+          <div class="drop-text">Kéo thả tệp vào đây hoặc nhấn để duyệt</div>
+          <div class="drop-hint">Hỗ trợ mọi định dạng tệp • Truyền trực tiếp qua RAM / P2P</div>
+          <input type="file" id="fileInput" class="hidden">
+        </div>
+
+        <div id="selectedFileInfo" class="selected-file-badge hidden">
+          <div class="file-info-text">
+            <span class="file-name" id="selectedFileName">tailieu.zip</span>
+            <span class="file-size" id="selectedFileSize">0 MB</span>
+          </div>
+          <button class="btn-remove-file" onclick="removeSelectedFile()" title="Xóa chọn">✕</button>
+        </div>
+
+        <div class="options-group">
+          <div class="options-label">
+            <span>Số lượng người nhận tối đa (1 đến 5 người):</span>
+            <strong id="maxReceiversLabel" style="color: var(--primary);">1 người</strong>
+          </div>
+          <div class="receivers-selector">
+            <button type="button" class="receiver-opt-btn active" onclick="setMaxReceivers(1)">1</button>
+            <button type="button" class="receiver-opt-btn" onclick="setMaxReceivers(2)">2</button>
+            <button type="button" class="receiver-opt-btn" onclick="setMaxReceivers(3)">3</button>
+            <button type="button" class="receiver-opt-btn" onclick="setMaxReceivers(4)">4</button>
+            <button type="button" class="receiver-opt-btn" onclick="setMaxReceivers(5)">5</button>
+          </div>
+        </div>
+
+        <button class="btn-action-primary" id="btnCreateSession" onclick="createSendSession()" disabled>
+          <span>🚀</span> Bắt Đầu Tạo Mã Gửi (15 Phút)
+        </button>
+      </div>
+
+      <!-- Bước 2: Hiển thị Mã Gửi 9 Số & Quản lý Nhận -->
+      <div id="senderStepActive" class="hidden">
+        <div class="secret-code-container">
+          <div class="code-title">MÃ GỬI TỆP BÍ MẬT CỦA BẠN (9 SỐ)</div>
+          <div class="digit-display">
+            <span class="digit-group" id="sendCodeGroup1">---</span>
+            <span class="digit-separator">•</span>
+            <span class="digit-group" id="sendCodeGroup2">---</span>
+            <span class="digit-separator">•</span>
+            <span class="digit-group" id="sendCodeGroup3">---</span>
+          </div>
+          <div class="code-actions">
+            <button class="btn-sub-action" onclick="copySendCode()">📋 Sao Chép Mã</button>
+            <button class="btn-sub-action" onclick="showQrModal()">📱 Mã QR Điện Thoại</button>
+            <button class="btn-sub-action" style="color: #ff5c5c;" onclick="cancelSendSession()">✕ Hủy</button>
+          </div>
+        </div>
+
+        <!-- Đồng hồ đếm ngược -->
+        <div class="timer-container">
+          <span>⏳ Thời gian còn lại:</span>
+          <span class="timer-clock" id="senderTimer">15:00</span>
+          <span id="senderTimerTag" class="timer-extended-tag hidden">+3p Gia hạn</span>
+        </div>
+
+        <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center;">
+          Chia sẻ mã 9 số này cho người nhận. Khi họ nhập mã và bấm tiếp tục, bạn sẽ nhận được yêu cầu xác thực.
+        </div>
+
+        <!-- Danh sách yêu cầu kết nối từ người nhận -->
+        <div class="incoming-requests-container" id="incomingRequestsBox">
+          <div class="incoming-title">
+            <span>Yêu cầu người nhận kết nối</span>
+            <span style="font-size: 0.8rem; color: var(--text-muted);" id="receiverSlotsText">0/1 người</span>
+          </div>
+          <div id="requestsList">
+            <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 12px;">
+              Đang chờ người nhận nhập mã 9 số...
+            </div>
+          </div>
+        </div>
+
+        <!-- Thanh tiến trình gửi -->
+        <div class="progress-card hidden" id="senderProgressCard">
+          <div class="progress-header">
+            <span id="senderProgressStatus">Đang gửi tệp...</span>
+            <span id="senderProgressPercent">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="senderProgressBar"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 6px; color: var(--text-muted);">
+            <span id="senderSpeed">0 MB/s</span>
+            <span id="senderTransferred">0 / 0 MB</span>
+          </div>
+        </div>
+
+        <!-- Banner tự xóa dấu vết khi hoàn tất -->
+        <div class="wipe-banner hidden" id="senderWipeBanner">
+          <span>✨</span> Đã hoàn tất chia sẻ. Toàn bộ dấu vết phiên đã tự động xóa sạch khỏi hệ thống!
+        </div>
+      </div>
+    </main>
+
+    <!-- ======================================================= -->
+    <!-- TAB 2: BÊN NHẬN TỆP (RECEIVER) -->
+    <!-- ======================================================= -->
+    <main class="main-card hidden" id="receiverSection">
+      <!-- Huy hiệu Mã Xác Minh Tạm Thời của Người Nhận (9 số) -->
+      <div class="receiver-badge-box">
+        <div class="receiver-badge-title">
+          <span>🛡️</span> MÃ XÁC MINH PHIÊN CỦA BẠN (TẠM THỜI)
+        </div>
+        <div class="receiver-badge-code" id="receiverTempCode">--- --- ---</div>
+        <div class="receiver-badge-note">
+          Mã này được tạo ngẫu nhiên theo phiên duyệt. Khi bạn đóng tab hoặc reload trang, mã này sẽ biến mất vĩnh viễn.
+        </div>
+      </div>
+
+      <!-- Ô nhập mã gửi 9 số -->
+      <div id="receiverInputStep">
+        <div class="input-code-group">
+          <label class="input-code-label" for="inputSendCode">
+            Nhập Mã Gửi Tệp 9 Số từ Người Gửi:
+          </label>
+          <input type="text" id="inputSendCode" class="code-input" placeholder="123456789" maxlength="9" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </div>
+
+        <button class="btn-action-primary" id="btnProceedReceive" onclick="requestReceiveFile()">
+          <span>⚡</span> Tiếp Tục Nhận Tệp
+        </button>
+      </div>
+
+      <!-- Trạng thái chờ người gửi phê duyệt -->
+      <div id="receiverWaitingApprovalStep" class="hidden">
+        <div style="text-align: center; padding: 20px 0;">
+          <div style="font-size: 2.2rem; margin-bottom: 12px; animation: pulse-star 1.5s infinite ease-in-out;">🛰️</div>
+          <h3 style="margin-bottom: 8px; color: #fff;">Đã Gửi Mã Xác Minh Đến Người Gửi</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 420px; margin: 0 auto 16px;">
+            Mã xác minh <strong style="color: var(--primary);" id="waitingReceiverCodeEcho">---</strong> đã được gửi tới người gửi. Thời hạn phiên đã được tự động cộng thêm 3 phút. Vui lòng chờ người gửi chấp nhận truyền tệp.
+          </p>
+          <div class="timer-container">
+            <span>⏳ Thời gian phiên:</span>
+            <span class="timer-clock" id="receiverTimer">--:--</span>
+            <span class="timer-extended-tag">+3p Đã Gia Hạn</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Đang nhận & Thanh tiến trình -->
+      <div id="receiverProgressStep" class="hidden">
+        <div class="selected-file-badge">
+          <div class="file-info-text">
+            <span class="file-name" id="incomingFileName">Tệp đang tải...</span>
+            <span class="file-size" id="incomingFileSize">0 MB</span>
+          </div>
+          <span style="color: var(--accent-green); font-size: 0.8rem; font-weight: bold;">ĐÃ PHÊ DUYỆT</span>
+        </div>
+
+        <div class="progress-card">
+          <div class="progress-header">
+            <span id="receiverProgressStatus">Đang nhận dữ liệu trực tiếp...</span>
+            <span id="receiverProgressPercent">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="receiverProgressBar"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 6px; color: var(--text-muted);">
+            <span id="receiverSpeed">0 MB/s</span>
+            <span id="receiverTransferred">0 / 0 MB</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hoàn tất & Tẩy siêu dữ liệu -->
+      <div id="receiverCompleteStep" class="hidden">
+        <div class="wipe-banner">
+          <span>🛡️</span>
+          <div>
+            <strong>Đã nhận tệp thành công!</strong>
+            <div style="font-size: 0.8rem; opacity: 0.9; margin-top: 2px;">
+              Thông tin nguồn gốc tệp đã được làm sạch hoàn toàn. Dấu vết phiên đã tự hủy.
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-action-primary" style="margin-top: 20px;" onclick="resetReceiverState()">
+          <span>🔄</span> Nhận Tệp Mới
+        </button>
+      </div>
+    </main>
+
+    <!-- Modal QR Code -->
+    <div class="modal-overlay hidden" id="qrModal" onclick="closeQrModal(event)">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="color: #fff; margin-bottom: 8px;">Quét Mã Bằng Điện Thoại</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">
+          Mở camera trên điện thoại Android hoặc iOS để nhận mã chuyển tệp nhanh.
+        </p>
+        <div class="qr-box" id="qrCodeTarget"></div>
+        <div style="font-family: monospace; font-size: 1.1rem; color: var(--primary); margin-bottom: 16px;" id="qrCodeDigits">
+          --- --- ---
+        </div>
+        <button class="btn-sub-action" style="margin: 0 auto;" onclick="closeQrModal()">Đóng</button>
+      </div>
+    </div>
+
+    <!-- Thông tin kết nối nội bộ LAN (Android <-> Windows) -->
+    <div class="lan-info-card" id="lanInfoBox">
+      <span>Mạng nội bộ: </span>
+      <span class="lan-ip-text" id="lanIpList">Đang tải địa chỉ kết nối...</span>
+    </div>
+
+    <!-- Security Footer -->
+    <footer class="security-footer">
+      <div class="security-item">
+        <span>✔</span> 100% Incognito
+      </div>
+      <div class="security-item">
+        <span>✔</span> Zero-Log Máy Chủ
+      </div>
+      <div class="security-item">
+        <span>✔</span> Không Cần Tài Khoản
+      </div>
+      <div class="security-item">
+        <span>✔</span> Xóa Dấu Vết Tệp
+      </div>
+    </footer>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/qrcode.min.js"></script>
+  <script src="js/stars.js"></script>
+  <script src="js/transfer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
